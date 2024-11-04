@@ -1,4 +1,3 @@
-
 import random
 
 def print_welcome(name: str, width: int = 20) -> None:
@@ -42,11 +41,11 @@ def get_user_fight_options() -> int:
     """Prompts the user for their action during a fight and validates input."""
     while True:
         try:
-            choice = int(input("What would you like to do?\n1) Fight Monster\n2) Run Away\n> "))
-            if choice in (1, 2):
+            choice = int(input("What would you like to do?\n1) Fight Monster\n2) Run Away\n3) Use Scroll of Death\n> "))
+            if choice in (1, 2, 3):
                 return choice
             else:
-                print("Invalid choice. Please choose 1 or 2.")
+                print("Invalid choice. Please choose 1, 2, or 3.")
         except ValueError:
             print("Please enter a valid number.")
 
@@ -60,51 +59,32 @@ def purchase_item(item_price: float, player_gold: float, quantity: int) -> tuple
         print("Not enough gold to purchase that item.")
         return 0, player_gold  # Return 0 items bought if not enough gold
 
-def fight_monster(player_hp: int, player_gold: int) -> int:
-    """Handles the logic for fighting a monster."""
-    monster = new_random_monster()
-    monster_health = monster['health']
-    
-    while player_hp > 0 and monster_health > 0:
-        display_fight_statistics(player_hp, monster, player_gold)  # Include player_gold here
+def equip_item(inventory):
+    """Allows the user to equip a weapon from their inventory."""
+    weapons = [item for item in inventory if item['type'] == 'weapon']
+    if not weapons:
+        print("You have no weapons to equip.")
+        return
+    print("Available weapons to equip:")
+    for i, weapon in enumerate(weapons, start=1):
+        print(f"{i}) {weapon['name']} (Durability: {weapon['currentDurability']})")
+    choice = int(input("Choose a weapon to equip (or 0 to cancel): "))
+    if choice > 0 and choice <= len(weapons):
+        equipped_weapon = weapons[choice - 1]
+        print(f"You equipped the {equipped_weapon['name']}!")
+    else:
+        print("Invalid choice.")
 
-        action = get_user_fight_options()
-        
-        if action == 1:  # Fight
-            damage_to_monster = random.randint(10, 20)  # Damage dealt to monster
-            damage_to_player = monster['power']
-            monster_health -= damage_to_monster
-            player_hp -= damage_to_player
-            
-            print(f"You dealt {damage_to_monster} damage to the {monster['name']}!")
-            print(f"The {monster['name']} dealt {damage_to_player} damage to you!")
-            
-            # Display current HP after the attack
-            print(f"Current HP: {player_hp}, {monster['name']} HP: {monster_health}")
-            
-            # Check if the monster is defeated
-            if monster_health <= 0:
-                print(f"You defeated the {monster['name']}!")
-                player_gold += monster['money']  # Gain money after defeating the monster
-                return player_hp  # Return current HP after victory
-
-        elif action == 2:  # Run Away
-            print("You ran away safely!")
-            return player_hp  # Return current HP after fleeing
-        
-        # Check if player is still alive to present sleep option
-        if player_hp > 0:
-            sleep_choice = input("Would you like to sleep to restore HP for 5 Gold? (y/n) ").lower()
-            if sleep_choice == 'y' and player_gold >= 5:
-                player_hp = min(player_hp + 10, 50)  # Restore HP, max 50
-                player_gold -= 5
-                print("You slept and restored 10 HP!")
-            elif sleep_choice == 'y':
-                print("Not enough gold to sleep.")
-    
-    if player_hp <= 0:
-        print("You have been defeated!")
-    return player_hp
+def use_consumable(inventory, current_hp):
+    """Uses a consumable item from the inventory."""
+    consumables = [item for item in inventory if item['type'] == 'consumable']
+    if consumables:
+        current_hp = float('inf')  # Restore full HP for simplicity
+        inventory.remove(consumables[0])  # Remove the used consumable
+        print("You used a Scroll of Death and defeated the monster instantly!")
+    else:
+        print("You have no Scrolls of Death to use.")
+    return current_hp
 
 def print_shop_menu(item1, price1, item2, price2):
     """Display the shop menu with available items and their prices."""
@@ -136,9 +116,3 @@ def main_game_loop():
         elif choice == '2':
             print("Thanks for playing!")
             break
-        else:
-            print("Invalid choice. Please try again.")
-
-if __name__ == "__main__":
-    print_welcome("Player")
-    main_game_loop()
