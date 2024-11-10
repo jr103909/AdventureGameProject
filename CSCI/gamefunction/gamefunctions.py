@@ -170,4 +170,3 @@ def fight_monster(player_hp, player_gold, inventory, max_hp, current_weapon):
             print(f"You have {player_gold} gold now!")
 
     return player_hp, player_gold
-
