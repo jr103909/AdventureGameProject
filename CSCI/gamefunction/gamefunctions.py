@@ -11,23 +11,23 @@ def new_random_monster() -> dict:
         {
             "name": "Beholder",
             "description": "Beholders cast spells through their many eyes.",
-            "health": random.randint(40, 70),
-            "power": random.randint(15, 25),
-            "money": random.randint(100, 500)
+            "health": random.randint(40, 70),  # Original health
+            "power": random.randint(15, 25),   # Original power
+            "money": random.randint(100, 500)  # Original reward
         },
         {
             "name": "Kobold",
             "description": "Kobolds make up for their physical ineptitude with a cleverness for trap making.",
-            "health": random.randint(5, 10),
-            "power": random.randint(1, 3),
-            "money": random.randint(1, 3)
+            "health": random.randint(5, 10),  # Original health
+            "power": random.randint(1, 3),    # Original power
+            "money": random.randint(1, 3)     # Original reward
         },
         {
             "name": "Tarrasque",
             "description": "The Tarrasque is a legendary creature of immense size and power.",
-            "health": random.randint(400, 600),
-            "power": random.randint(60, 100),
-            "money": random.randint(500, 1000)
+            "health": random.randint(400, 600),  # Original health
+            "power": random.randint(60, 100),    # Original power
+            "money": random.randint(500, 1000)   # Original reward
         }
     ]
     return random.choice(monster_manual)
@@ -64,7 +64,7 @@ def equip_item(inventory):
     weapons = [item for item in inventory if item['type'] == 'weapon']
     if not weapons:
         print("You have no weapons to equip.")
-        return
+        return None
     print("Available weapons to equip:")
     for i, weapon in enumerate(weapons, start=1):
         print(f"{i}) {weapon['name']} (Durability: {weapon['currentDurability']})")
@@ -72,19 +72,23 @@ def equip_item(inventory):
     if choice > 0 and choice <= len(weapons):
         equipped_weapon = weapons[choice - 1]
         print(f"You equipped the {equipped_weapon['name']}!")
+        return equipped_weapon  # Return the equipped weapon
     else:
         print("Invalid choice.")
+        return None
 
-def use_consumable(inventory, current_hp):
+def use_consumable(inventory, current_hp, monster, max_hp):
     """Uses a consumable item from the inventory."""
     consumables = [item for item in inventory if item['type'] == 'consumable']
     if consumables:
-        current_hp = float('inf')  # Restore full HP for simplicity
-        inventory.remove(consumables[0])  # Remove the used consumable
-        print("You used a Scroll of Death and defeated the monster instantly!")
+        # Use the Scroll of Death to defeat the monster instantly
+        current_hp = max_hp  # Restore full HP
+        inventory.remove(next(item for item in inventory if item['type'] == 'consumable'))  # Remove the used consumable
+        print(f"You used a Scroll of Death and defeated the {monster['name']} instantly!")
+        return current_hp, monster['money']  # Return the monster's gold
     else:
         print("You have no Scrolls of Death to use.")
-    return current_hp
+    return current_hp, 0
 
 def print_shop_menu(item1, price1, item2, price2):
     """Display the shop menu with available items and their prices."""
@@ -97,22 +101,53 @@ def game_over():
     print("The valiant warrior has fallen! Game Over...")
     exit()
 
-def main_game_loop():
-    """Main loop of the game allowing player interactions and game flow."""
-    player_hp = 50  # Increased HP
-    player_gold = 10
-    
-    while True:
-        print(f"\nCurrent HP: {player_hp}, Current Gold: {player_gold}")
-        if player_hp <= 0:
-            game_over()
-        
-        choice = input("What would you like to do?\n1) Fight Monster\n2) Quit\n> ")
-        
-        if choice == '1':
-            player_hp = fight_monster(player_hp, player_gold)
+def sleep_and_restore_hp(current_hp, max_hp):
+    """Restore the player's HP to full after sleeping."""
+    print("You take a restful sleep and restore all your HP!")
+    return max_hp  # Restore HP to the player's max HP
+
+def fight_monster(player_hp, player_gold, inventory, max_hp, current_weapon):
+    """Function to handle fighting a monster."""
+    monster = new_random_monster()
+    monster_hp = monster['health']
+    print(f"You encounter a {monster['name']}! {monster['description']}")
+
+    initial_hp = player_hp  # Store the initial HP before the fight
+
+    while monster_hp > 0 and player_hp > 0:
+        display_fight_statistics(player_hp, monster, player_gold)
+
+        action = get_user_fight_options()
+        if action == 1:  # Fight
+            if current_weapon:  # If the player has a weapon equipped
+                if current_weapon['currentDurability'] > 0:
+                    damage_to_monster = random.randint(10, 20)
+                    monster_hp -= damage_to_monster
+                    current_weapon['currentDurability'] -= 1
+                    print(f"You dealt {damage_to_monster} damage to the {monster['name']}! Remaining durability: {current_weapon['currentDurability']}")
+                else:
+                    print("Your sword is dull and cannot be used!")
+                    continue
+            else:
+                damage_to_monster = 5
+                monster_hp -= damage_to_monster
+
+            damage_to_player = monster['power']
+            player_hp -= damage_to_player
+            print(f"The {monster['name']} dealt {damage_to_player} damage to you!")
+
+            if monster_hp <= 0:
+                print(f"You defeated the {monster['name']}!")
+                player_gold += monster['money']  # Add gold from monster
             if player_hp <= 0:
-                game_over()
-        elif choice == '2':
-            print("Thanks for playing!")
+                print("You have been defeated!")
+                break
+        elif action == 2:  # Run Away
+            print("You ran away safely!")
             break
+        elif action == 3:  # Use Scroll of Death
+            player_hp, gold_from_monster = use_consumable(inventory, initial_hp, monster)
+            player_gold += gold_from_monster  # Add gold from monster when using Scroll of Death
+            print(f"You have {player_gold} gold now!")
+
+    return player_hp, player_gold
