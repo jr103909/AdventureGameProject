@@ -1,5 +1,24 @@
 import random
 
+import json
+
+def save_game(filename, player_data):
+    """Saves the game data to a JSON file."""
+    with open(filename, 'w') as f:
+        json.dump(player_data, f, indent=4)
+    print(f"Game saved to {filename}.")
+
+def load_game(filename):
+    """Loads the game data from a JSON file."""
+    try:
+        with open(filename, 'r') as f:
+            player_data = json.load(f)
+        print(f"Game loaded from {filename}.")
+        return player_data
+    except FileNotFoundError:
+        print(f"No save file found with the name {filename}.")
+        return None
+
 def print_welcome(name: str, width: int = 20) -> None:
     """Prints a welcome message centered within a specified width."""
     message = f"Hello, {name}!"
@@ -151,3 +170,4 @@ def fight_monster(player_hp, player_gold, inventory, max_hp, current_weapon):
             print(f"You have {player_gold} gold now!")
 
     return player_hp, player_gold
+
