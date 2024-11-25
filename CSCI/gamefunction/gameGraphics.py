@@ -1,9 +1,10 @@
 # James Rogan
 # gameGraphics.py
-# 11/17/2024
+# 11/24/2024
 
 import pygame
 import sys
+import random
 
 # Initialize Pygame
 pygame.init()
@@ -14,24 +15,68 @@ SQUARE_SIZE = 32       # Each square is 32x32 pixels
 SCREEN_WIDTH = GRID_SIZE * SQUARE_SIZE
 SCREEN_HEIGHT = GRID_SIZE * SQUARE_SIZE
 
-# display settings
+# Display settings
 screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
-pygame.display.set_caption("Move the Square")
-
-# Defines the starting position of the square
-x, y = 0, 0  # top left corner
-square = pygame.Rect(x * SQUARE_SIZE, y * SQUARE_SIZE, SQUARE_SIZE, SQUARE_SIZE)
+pygame.display.set_caption("Adventure forth!")
 
 # Colors
 GREY = (211, 211, 211)
-RED = (255, 0, 0)
+RED = (255, 0, 0)        # Player square color
+GREEN = (0, 255, 0)      # Monster square color
 
 # Movement speed
 playerspeed = 1  # Move by one square space each key press
 
+# Player's initial position
+x, y = 0, 0
+player_square = pygame.Rect(x * SQUARE_SIZE, y * SQUARE_SIZE, SQUARE_SIZE, SQUARE_SIZE)
+
+# Function to check if player and monster occupy the same position
+def check_encounter(player_x, player_y, monster_x, monster_y):
+    if player_x == monster_x and player_y == monster_y:
+        print("The beast is slain!")
+        return True
+    return False
+
+# Monster class
+class Monster:
+    def __init__(self, x, y):
+        self.x = x
+        self.y = y
+        self.rect = pygame.Rect(self.x * SQUARE_SIZE, self.y * SQUARE_SIZE, SQUARE_SIZE, SQUARE_SIZE)
+
+    # Move the monster one square at a time in a random direction (adjacent square)
+    def move(self, player_x, player_y):
+        # Direction logic to move monster toward the player in one of the four adjacent directions
+        if self.x < player_x and self.x < GRID_SIZE - 1:  # Move right if the player is to the right
+            self.x += 1
+        elif self.x > player_x and self.x > 0:  # Move left if the player is to the left
+            self.x -= 1
+        elif self.y < player_y and self.y < GRID_SIZE - 1:  # Move down if the player is below
+            self.y += 1
+        elif self.y > player_y and self.y > 0:  # Move up if the player is above
+            self.y -= 1
+
+        # Update monster's rect after moving
+        self.rect.x = self.x * SQUARE_SIZE
+        self.rect.y = self.y * SQUARE_SIZE
+
+# Function to create a monster at a random position not occupied by the player
+def create_monster(player_x, player_y):
+    while True:
+        monster_x = random.randint(0, GRID_SIZE - 1)
+        monster_y = random.randint(0, GRID_SIZE - 1)
+        if monster_x != player_x or monster_y != player_y:  # Ensure the monster doesn't spawn on the player
+            return Monster(monster_x, monster_y)
+
 # Main game loop
 running = True
 clock = pygame.time.Clock()
+
+# Create the first monster (only one at the start)
+monsters = [create_monster(x, y)]
+
+player_moved = False
 
 while running:
     # Event handling
@@ -43,24 +88,57 @@ while running:
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_UP and y > 0:
                 y -= 1
+                player_moved = True
             elif event.key == pygame.K_DOWN and y < GRID_SIZE - 1:
                 y += 1
+                player_moved = True
             elif event.key == pygame.K_LEFT and x > 0:
                 x -= 1
+                player_moved = True
             elif event.key == pygame.K_RIGHT and x < GRID_SIZE - 1:
                 x += 1
+                player_moved = True
             elif event.key == pygame.K_q:  # Quit if 'q' is pressed
                 running = False
 
-    # Update the square's rect position
-    square.x = x * SQUARE_SIZE
-    square.y = y * SQUARE_SIZE
+    # Update the player square's rect position
+    player_square.x = x * SQUARE_SIZE
+    player_square.y = y * SQUARE_SIZE
+
+    # If the player moved, move the monster one square towards the player
+    if player_moved:
+        # Move all monsters
+        for monster in monsters:
+            monster.move(x, y)
+
+        # Check for encounters with the monsters
+        monsters_to_remove = []
+        for monster in monsters:
+            if check_encounter(x, y, monster.x, monster.y):
+                monsters_to_remove.append(monster)
+
+        # Remove defeated monsters
+        for monster in monsters_to_remove:
+            monsters.remove(monster)
+
+        # If all monsters are defeated, spawn two new monsters
+        if len(monsters) == 0:
+            print("Look out, there's more!")
+            # Spawn two new monsters at random positions
+            monsters.append(create_monster(x, y))
+            monsters.append(create_monster(x, y))
+
+        player_moved = False  # Reset player move flag
 
     # Clear the screen
     screen.fill(GREY)
 
-    # Draw the square
-    pygame.draw.rect(screen, RED, square)
+    # Draw the player square
+    pygame.draw.rect(screen, RED, player_square)
+
+    # Draw all monsters
+    for monster in monsters:
+        pygame.draw.rect(screen, GREEN, monster.rect)
 
     # Update the display
     pygame.display.update()
